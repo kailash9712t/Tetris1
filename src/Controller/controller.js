@@ -18,26 +18,34 @@ const Test = {
 const Authentication = {
     Login: async (req, res) => {
         const { EmailOrUsername, password } = req.body;
-        const check = await User.find({ username: EmailOrUsername }, { password: 1, _id: 0 }).collation({locale : "en"})
+        const requiredField = {
+            "timeStamp" : 0,
+            "_id" : 0,
+            "authprovider" : 0,
+            "__v" : 0,
+            "Status" : 0
+        }
+        const check = await User.find({ username: EmailOrUsername },requiredField).collation({ locale: "en" })
         if (check.length == 0) {
             res.status(400).send("User Not Found");
             return;
         }
         const validOrNot = await HashOperation.compareHash(check[0]["password"], password);
         if (validOrNot) {
-            res.status(200).send({
+            const tokens = {
                 "accessToken": await Tokens.generateToken(true),
                 "refreshToken": await Tokens.generateToken(false)
-            });
+            }
+            res.status(200).send({...check[0]["_doc"],...tokens});
         } else {
             res.status(500).send(null);
         }
     },
-    helper : (req,res) => {
+    helper: (req, res) => {
         const file = req.file;
         Authentication.addImage(file);
     },
-    addImage: async (file) => { 
+    addImage: async (file) => {
         const photoId = "fdjadfkjasdjfn";
         return new Promise(async (resolve, reject) => {
             console.log("Running");
@@ -48,12 +56,12 @@ const Authentication = {
                 }
                 else {
                     console.log("Image Added!");
-                    resolve("true"); 
+                    resolve("true");
                 }
             }).end(file.buffer);
         }).catch((error) => {
             console.log("check")
-        });  
+        });
     },
     uploadImage: async (file, photoId) => {
         return new Promise(async (resolve, reject) => {
@@ -80,22 +88,22 @@ const Authentication = {
             Email,
             DisplayName,
             Bio,
-            AuthProvider, 
-            MobileNumber, 
+            AuthProvider,
+            MobileNumber,
         } = req.body;
         const file = req.file;
         console.log(file);
         if (!Username || !Email || !DisplayName || !AuthProvider) {
-            console.log("username : -",Username);
-            console.log("email ",Email);
-            console.log("displayname",DisplayName);
-            console.log("auth",AuthProvider);
+            console.log("username : -", Username);
+            console.log("email ", Email);
+            console.log("displayname", DisplayName);
+            console.log("auth", AuthProvider);
             console.log("Required Field is Null");
             res.status(400).send("Required Field is Null");
             return;
         }
         var GenerateRandom = undefined;
-        if(file){
+        if (file) {
             GenerateRandom = generate.GenerateRandomString(10);
         }
         const user = new User({
@@ -115,9 +123,9 @@ const Authentication = {
             await Authentication.uploadImage(file, GenerateRandom);
         }
         res.status(200).send({
-                "accessToken": await Tokens.generateToken(true),
-                "refreshToken": await Tokens.generateToken(false)
-            });
+            "accessToken": await Tokens.generateToken(true),
+            "refreshToken": await Tokens.generateToken(false)
+        });
     },
 
 }
@@ -152,26 +160,69 @@ const UserApi = {
         res.status(200).send("Done");
     },
 
-    CheckUsername: async (req,res) => {
+    CheckUsername: async (req, res) => {
         console.log('request');
         const username = req.body.username;
         console.log(username);
-        if(!username){
+        if (!username) {
             res.status(401).send("Missing Fields");
             return;
         }
 
         const requireField = {
-            "username" : 1,
-            "_id" : 0
+            "username": 1,
+            "_id": 0
         }
-        const call = await User.find({"username" : username},requireField).collation({locale : "en"});
+        const call = await User.find({ "username": username }, requireField).collation({ locale: "en" });
         console.log(call);
-        if(call.length == 0){
+        if (call.length == 0) {
             res.status(200).send(false)
-        }else{
+        } else {
             res.status(404).send(true);
         }
+    },
+    updateUserData: async (req, res) => {
+        try {
+            const { username1, key, value } = req.body;
+
+            if (!username1 || !key) {
+                return res.status(400).send("Missing username or field key.");
+            }
+
+            const result = await User.updateOne(
+                { username: username1 },
+                { $set: { [key]: value } });
+
+            if (result.matchedCount == 0) {
+                return res.status(404).send("User not found");
+            } else {
+                return res.status(200).send("Field updated successfully!");
+            }
+        } catch (err) {
+            console.error("MongoDB update error:", err);
+            return res.status(500).send("Internal server error");
+        }
+    },
+    
+    fetchUserProfile: async (req,res) => {
+        const {usernameOrEmail} = req.body;
+
+        const requiredField = {
+            "username" : 1,
+            "displayName" : 1,
+            "mobileNumber" : 1,
+            "bio" : 1,
+            "email" : 1
+        }
+
+        if(!usernameOrEmail){
+            res.status(404).send("Invalid request");
+            return;
+        }
+
+        const result = await User.find({"username" : usernameOrEmail},requiredField);
+
+        res.status(200).send(result);
     }
 }
 export { Test, Authentication, UserApi };

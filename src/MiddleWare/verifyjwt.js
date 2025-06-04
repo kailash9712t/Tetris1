@@ -3,15 +3,14 @@ import 'dotenv/config';
 
 const verifyJwt = (req,res,next) => {
     const rawToken = req.headers["authorization"];
-    const token = rawToken.split(" ")[1];
-    if(token){
+    if(rawToken){
+        const token = rawToken.split(" ")[1];
         jwt.verify(token,process.env.TokenPassword,(decode,error) => {
             if(error){
                 console.log("Invalid Token");
                 res.status(401).send("Invalid Token");
                 return;
             }else{
-                res.status.send("Valid Token");
                 next();
             }
         });

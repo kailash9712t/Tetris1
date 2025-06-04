@@ -18,12 +18,13 @@ export default (io) => {
         }
         HandleRoutes(){
             this.SendData("ClientID",this.id);
+            this.socket.on("test",(data) => this.TestData(data));
             this.socket.on("RealTimeChat",(data) => this.RealTimeChats(data));
             this.socket.on("MessageSeen",(data) => this.MessageSeen(data));
             this.socket.on("disconnect",() => this.Disconnect());
         }
-        updateIdWithName(){
-
+        TestData(data){
+            console.log(data.name);
         }
         SendData(Route, Data){
             this.socket.emit(Route,Data);
@@ -52,7 +53,7 @@ export default (io) => {
                 console.log("User not present");
             }
         }
-
+        
         RealTimeChats(data){
             const receiverName = data.To;
             const targetClient = Clients.get(receiverName);
