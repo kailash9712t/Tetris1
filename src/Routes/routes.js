@@ -16,13 +16,12 @@ Route.route("/").post(asynchandler(Test.HomeRoute));
 Route.route("/Register").post(upload.single('file'),asynchandler(Authentication.Register));
 Route.route("/Login").post(asynchandler(Authentication.Login));
 Route.route("/generateToken").post(verifyJwt,Tokens.generateToken);
-Route.route("/addImage").post(upload.single('file'), asynchandler(Authentication.helper));
  
 //User Routes   
-Route.route("/UpdateId").post(asynchandler(UserApi.FetchContactList)); 
+Route.route("/FetchContact").post(asynchandler(UserApi.FetchContactList)); 
 Route.route("/checkUsername").post(asynchandler(UserApi.CheckUsername));
 Route.route("/updateData").post(verifyJwt ,asynchandler(UserApi.updateUserData));
 Route.route("/userMetaData").post(asynchandler(UserApi.fetchUserProfile));
+Route.route("/uplaodImage").post(upload.single('file'),asynchandler(UserApi.updateImage));
  
-Route.route("/UploadImage").post(upload.single("file"),Authentication.uploadImage);
 export default Route;    

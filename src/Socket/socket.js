@@ -18,10 +18,17 @@ export default (io) => {
         }
         HandleRoutes(){
             this.SendData("ClientID",this.id);
+            this.socket.on("newUsername",(data) => this.NewUserName(data));
             this.socket.on("test",(data) => this.TestData(data));
             this.socket.on("RealTimeChat",(data) => this.RealTimeChats(data));
             this.socket.on("MessageSeen",(data) => this.MessageSeen(data));
             this.socket.on("disconnect",() => this.Disconnect());
+        }
+        NewUserName(data){
+            console.log(data["clientId"]);
+            const socket = Clients.get(data["clientId"]);
+            Clients.set(data["username"], socket);
+            Clients.delete(data["clientId"]);
         }
         TestData(data){
             console.log(data.name);
@@ -60,7 +67,7 @@ export default (io) => {
             if(!targetClient){
                 targetClient.SendData("RealTimeChat",data);
 
-                this.MessageArrivedToServer(data);
+                // this.MessageArrivedToServer(data);
 
                 console.log("new Message");
             }else{

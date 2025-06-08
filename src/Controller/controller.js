@@ -19,13 +19,13 @@ const Authentication = {
     Login: async (req, res) => {
         const { EmailOrUsername, password } = req.body;
         const requiredField = {
-            "timeStamp" : 0,
-            "_id" : 0,
-            "authprovider" : 0,
-            "__v" : 0,
-            "Status" : 0
+            "timeStamp": 0,
+            "_id": 0,
+            "authprovider": 0,
+            "__v": 0,
+            "Status": 0
         }
-        const check = await User.find({ username: EmailOrUsername },requiredField).collation({ locale: "en" })
+        const check = await User.find({ username: EmailOrUsername }, requiredField).collation({ locale: "en" })
         if (check.length == 0) {
             res.status(400).send("User Not Found");
             return;
@@ -36,49 +36,10 @@ const Authentication = {
                 "accessToken": await Tokens.generateToken(true),
                 "refreshToken": await Tokens.generateToken(false)
             }
-            res.status(200).send({...check[0]["_doc"],...tokens});
+            res.status(200).send({ ...check[0]["_doc"], ...tokens });
         } else {
             res.status(500).send(null);
         }
-    },
-    helper: (req, res) => {
-        const file = req.file;
-        Authentication.addImage(file);
-    },
-    addImage: async (file) => {
-        const photoId = "fdjadfkjasdjfn";
-        return new Promise(async (resolve, reject) => {
-            console.log("Running");
-            cloudinary.uploader.upload_stream({ resource_type: 'image', folder: 'Whatsapp', public_id: photoId }, (error, result) => {
-                if (error) {
-                    console.log(error);
-                    reject("false");
-                }
-                else {
-                    console.log("Image Added!");
-                    resolve("true");
-                }
-            }).end(file.buffer);
-        }).catch((error) => {
-            console.log("check")
-        });
-    },
-    uploadImage: async (file, photoId) => {
-        return new Promise(async (resolve, reject) => {
-            console.log("Running");
-            cloudinary.uploader.upload_stream({ resource_type: 'image', folder: 'Whatsapp', public_id: photoId }, (error, result) => {
-                if (error) {
-                    console.log(error);
-                    reject("false");
-                }
-                else {
-                    console.log("Image Added!");
-                    resolve("true");
-                }
-            }).end(file.buffer);
-        }).catch((error) => {
-            console.log("check")
-        });
     },
     Register: async (req, res) => {
         console.log("new request");
@@ -102,9 +63,9 @@ const Authentication = {
             res.status(400).send("Required Field is Null");
             return;
         }
-        var GenerateRandom = undefined;
+        var photoUrl = undefined;
         if (file) {
-            GenerateRandom = generate.GenerateRandomString(10);
+            photoUrl = await UserApi.uploadImage(file);
         }
         const user = new User({
             username: Username,
@@ -112,16 +73,13 @@ const Authentication = {
             password: Password ?? null,
             displayName: DisplayName,
             bio: Bio ?? undefined,
-            profilePhotoId: GenerateRandom,
+            profilePhotoId: photoUrl["secure_url"],
             Status: true,
             authprovider: AuthProvider,
             mobileNumber: MobileNumber,
             timeStamp: new Date().toISOString
         })
         await user.save();
-        if (file) {
-            await Authentication.uploadImage(file, GenerateRandom);
-        }
         res.status(200).send({
             "accessToken": await Tokens.generateToken(true),
             "refreshToken": await Tokens.generateToken(false)
@@ -133,6 +91,8 @@ const Authentication = {
 const UserApi = {
     FetchContactList: async (req, res) => {
         const { searchQuery, ListOfUsers } = req.body;
+        console.log(searchQuery);
+        console.log(ListOfUsers);
         const requiredField = {
             "username": 1,
             "displayName": 1,
@@ -144,6 +104,7 @@ const UserApi = {
             $or: ListOfUsers
         }, requiredField
         );
+        console.log(RetriveData);
         for (var i = 0; i < RetriveData.length; i++) {
             filterUser.set(RetriveData[i].mobileNumber, RetriveData[i]);
         }
@@ -151,13 +112,49 @@ const UserApi = {
 
         for (var i = 0; i < contains.length; i++) {
             const currentUser = contains[i];
-            const test1 = filterUser.has(currentUser.mobileNumber);
+            const test1 = filterUser.has(currentUser["mobileNumber"]);
             if (!test1) {
-                filterUser.set(currentUser[i].mobileNumber, currentUser[i]);
+                filterUser.set(currentUser["mobileNumber"], currentUser);
             }
         }
-        console.log(filterUser);
-        res.status(200).send("Done");
+        console.log("this is filterUser : - ",filterUser);
+        res.status(200).send(Object.fromEntries(filterUser));
+    },
+
+    uploadImage: async (file) => {
+        return new Promise(async (resolve, reject) => {
+            const generateUnique = generate.GenerateRandomString(10);
+            cloudinary.uploader.upload_stream({ resource_type: 'image', folder: 'Whatsapp', public_id: generateUnique }, (error, result) => {
+                if (error) {
+                    console.log(error);
+                    reject(null);
+                }
+                else {
+                    console.log("Image Added!");
+                    resolve(result);
+                    console.log(result);
+                }
+            }).end(file.buffer);
+        }).catch((error) => {
+            console.log("uplaod Image error : - ", error);
+        });
+    },
+
+    updateImage: async (req, res) => {
+
+        const file = req.file;
+        if (!file) {
+            res.status(404).send("Missing Fields");
+            return;
+        }
+
+        const response = await UserApi.uploadImage(file);
+        if (!response) {
+            res.status(500).send("Internal server error");
+            return;
+        }
+        UserApi.updateUserData(req, res, response["secure_url"]);
+
     },
 
     CheckUsername: async (req, res) => {
@@ -181,46 +178,49 @@ const UserApi = {
             res.status(404).send(true);
         }
     },
-    updateUserData: async (req, res) => {
-        try {
-            const { username1, key, value } = req.body;
+    updateUserData: async (req, res, photoId) => {
+        var { username1, key, value } = req.body;
 
-            if (!username1 || !key) {
-                return res.status(400).send("Missing username or field key.");
-            }
-
-            const result = await User.updateOne(
-                { username: username1 },
-                { $set: { [key]: value } });
-
-            if (result.matchedCount == 0) {
-                return res.status(404).send("User not found");
-            } else {
-                return res.status(200).send("Field updated successfully!");
-            }
-        } catch (err) {
-            console.error("MongoDB update error:", err);
-            return res.status(500).send("Internal server error");
+        if (photoId) {
+            value = photoId;
         }
+
+        if (!username1 || !key) {
+            return res.status(400).send("Missing username or field key.");
+        }
+
+        const result = await User.updateOne(
+            { username: username1 },
+            { $set: { [key]: value } });
+
+        if (result.matchedCount == 0) {
+            res.status(404).send("User not found");
+        } else {
+            res.status(200).send(photoId != null ? { "photoId": photoId } : "Field update seccuessfully");
+            return true;
+        }
+        console.error("MongoDB update error:", err);
+        res.status(500).send("Internal server error");
+        return false;
     },
-    
-    fetchUserProfile: async (req,res) => {
-        const {usernameOrEmail} = req.body;
 
-        const requiredField = {
-            "username" : 1,
-            "displayName" : 1,
-            "mobileNumber" : 1,
-            "bio" : 1,
-            "email" : 1
-        }
+    fetchUserProfile: async (req, res) => {
+        const { username, requiredField } = req.body;
 
-        if(!usernameOrEmail){
+        // const requiredField = {
+        //     "username": 1,
+        //     "displayName": 1,
+        //     "mobileNumber": 1,
+        //     "bio": 1,
+        //     "email": 1
+        // }
+
+        if (!usernameOrEmail) {
             res.status(404).send("Invalid request");
             return;
         }
 
-        const result = await User.find({"username" : usernameOrEmail},requiredField);
+        const result = await User.find({ "username": username }, requiredField);
 
         res.status(200).send(result);
     }
