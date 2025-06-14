@@ -29,6 +29,7 @@ export default (io) => {
             const socket = Clients.get(data["clientId"]);
             Clients.set(data["username"], socket);
             Clients.delete(data["clientId"]);
+            console.log(data.username ," ",Clients.get(data.username))
         }
         TestData(data){
             console.log(data.name);
@@ -62,10 +63,12 @@ export default (io) => {
         }
         
         RealTimeChats(data){
-            const receiverName = data.To;
+            console.log("realtimechat")
+            console.log(data.to);
+            const receiverName = data.to;
             const targetClient = Clients.get(receiverName);
-            if(!targetClient){
-                targetClient.SendData("RealTimeChat",data);
+            if(targetClient){
+                targetClient.SendData("RealTimeChat",data); 
 
                 // this.MessageArrivedToServer(data);
 

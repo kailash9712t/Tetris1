@@ -81,6 +81,7 @@ const Authentication = {
         })
         await user.save();
         res.status(200).send({
+            "photoUrl": photoUrl == undefined ? null : photoUrl["secure_url"],
             "accessToken": await Tokens.generateToken(true),
             "refreshToken": await Tokens.generateToken(false)
         });
@@ -90,9 +91,9 @@ const Authentication = {
 
 const UserApi = {
     FetchContactList: async (req, res) => {
-        const { searchQuery, ListOfUsers } = req.body;
-        console.log(searchQuery);
-        console.log(ListOfUsers);
+        const { searchQuery, ListOfUsers , adminUsername} = req.body;
+        console.log("searchQuery ", searchQuery);
+        console.log("listOfUsers ", ListOfUsers);
         const requiredField = {
             "username": 1,
             "displayName": 1,
@@ -100,25 +101,30 @@ const UserApi = {
             "profilePhotoId": 1
         }
         const filterUser = new Map();
-        const RetriveData = await User.find({
-            $or: ListOfUsers
-        }, requiredField
-        );
+        var RetriveData = [];
+        if (ListOfUsers.length != 0) {
+            RetriveData = await User.find({
+                $or: ListOfUsers
+            }, requiredField
+            );
+        }
         console.log(RetriveData);
         for (var i = 0; i < RetriveData.length; i++) {
-            filterUser.set(RetriveData[i].mobileNumber, RetriveData[i]);
+            if(RetriveData[i].username != adminUsername){
+                filterUser.set(RetriveData[i].mobileNumber, RetriveData[i]);
+            }
         }
         const contains = await User.find({ "username": { $regex: searchQuery, $options: "i" } }, requiredField);
 
         for (var i = 0; i < contains.length; i++) {
             const currentUser = contains[i];
             const test1 = filterUser.has(currentUser["mobileNumber"]);
-            if (!test1) {
+            if (!test1 && currentUser["username"] != adminUsername) {
                 filterUser.set(currentUser["mobileNumber"], currentUser);
             }
         }
-        console.log("this is filterUser : - ",filterUser);
-        res.status(200).send(Object.fromEntries(filterUser));
+        console.log("this is filterUser : - ", filterUser);
+        res.status(200).send([...filterUser]);
     },
 
     uploadImage: async (file) => {
@@ -157,25 +163,17 @@ const UserApi = {
 
     },
 
-    CheckUsername: async (req, res) => {
-        console.log('request');
-        const username = req.body.username;
-        console.log(username);
-        if (!username) {
-            res.status(401).send("Missing Fields");
-            return;
-        }
+    CheckFields: async (req, res) => {
+        const { key, value } = req.body;
 
-        const requireField = {
-            "username": 1,
-            "_id": 0
-        }
-        const call = await User.find({ "username": username }, requireField).collation({ locale: "en" });
-        console.log(call);
-        if (call.length == 0) {
-            res.status(200).send(false)
-        } else {
-            res.status(404).send(true);
+        
+        const response = await User.find({ [key] : value}).collation({ locale: "en" });
+
+
+        if(response.length == 0){
+            res.status(200).send("No such id present");
+        }else{
+            res.status(404).send("Yes user present");
         }
     },
     updateUserData: async (req, res, photoId) => {
@@ -207,22 +205,18 @@ const UserApi = {
     fetchUserProfile: async (req, res) => {
         const { username, requiredField } = req.body;
 
-        // const requiredField = {
-        //     "username": 1,
-        //     "displayName": 1,
-        //     "mobileNumber": 1,
-        //     "bio": 1,
-        //     "email": 1
-        // }
-
-        if (!usernameOrEmail) {
+        if (!username) {
             res.status(404).send("Invalid request");
             return;
         }
 
         const result = await User.find({ "username": username }, requiredField);
 
-        res.status(200).send(result);
+        if(result.length == 0){
+            res.status(400).send("No user Found");
+        }else{
+            res.status(200).send(result[0]);
+        }
     }
 }
 export { Test, Authentication, UserApi };

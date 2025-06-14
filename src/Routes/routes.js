@@ -19,9 +19,10 @@ Route.route("/generateToken").post(verifyJwt,Tokens.generateToken);
  
 //User Routes   
 Route.route("/FetchContact").post(asynchandler(UserApi.FetchContactList)); 
-Route.route("/checkUsername").post(asynchandler(UserApi.CheckUsername));
+Route.route("/checkFields").post(asynchandler(UserApi.CheckFields));
 Route.route("/updateData").post(verifyJwt ,asynchandler(UserApi.updateUserData));
 Route.route("/userMetaData").post(asynchandler(UserApi.fetchUserProfile));
 Route.route("/uplaodImage").post(upload.single('file'),asynchandler(UserApi.updateImage));
+
  
 export default Route;    
