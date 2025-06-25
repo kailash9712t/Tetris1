@@ -25,9 +25,5 @@ Route.route("/updateData").post(verifyJwt ,asynchandler(UserApi.updateUserData))
 Route.route("/userMetaData").post(asynchandler(UserApi.fetchUserProfile));
 Route.route("/uplaodImage").post(upload.single('file'),asynchandler(UserApi.updateImage));
 
-Route.route("/OfflineChats").post(OfflineChatSupport.addChat);
-Route.route("/readChats").get(OfflineChatSupport.readChat);
-Route.route("/deleteChat").delete(OfflineChatSupport.deleteChat);
-
  
 export default Route;    
