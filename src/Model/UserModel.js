@@ -21,7 +21,8 @@ const UserSchema = new mongoose.Schema({
         require: true
     },
     displayName: {
-        type: String
+        type: String,
+        default : "user"
     },
     profilePhotoId: {
         type: String,
@@ -33,7 +34,7 @@ const UserSchema = new mongoose.Schema({
     },
     Status: {
         type: Boolean,
-        default: false,
+        default: true,
         require: true
     },
     authprovider: {
