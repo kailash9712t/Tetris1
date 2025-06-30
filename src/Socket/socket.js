@@ -1,5 +1,4 @@
 import { v4 as uuid } from "uuid";
-import FileHanding from "../Utils/fileHandling.js";
 import { OfflineChatSupport } from "../Controller/controller.js";
 
 export default (io) => {
@@ -19,12 +18,10 @@ export default (io) => {
             console.log("Client Size", Clients.size);
         })
 
-        socket.on('error', (err) => {
+        socket.on('error', (err) => { 
             console.log("Error occurs : - ", err);
         })
     });
-
-
 
     class ClientConnection {
         constructor(socket) {
@@ -36,6 +33,11 @@ export default (io) => {
             this.SendData("ClientID", this.id);
             this.socket.on("newUsername", (data) => this.NewUserName(data));
             this.socket.on("RealTimeChat", (data) => this.RealTimeChats(data));
+            this.socket.on("penddingData", (data) => this.penddingConfirmation(data));
+        }
+        penddingConfirmation(data){
+            const username = data.username;
+            this.deletePendingData(username);
         }
         NewUserName(data) {
             const socket = Clients.get(data["clientId"]);
@@ -44,6 +46,7 @@ export default (io) => {
             this.userPendingData(data["username"]);
             console.log("connected : - ",data["username"]);
             this.id = data["username"];
+            console.log("Client Size", Clients);
         }
         SendData(Route, Data) {
 
@@ -101,6 +104,16 @@ export default (io) => {
             console.log(chats);
             if(chats.length != 0){
                 this.socket.emit("penddingData",chats[0].Chats);
+            }
+        }
+        async deletePendingData(username){
+            console.log("chats deleted");
+            const chats = await OfflineChatSupport.deleteChat(username);
+
+            if(chats == 1){
+                console.log("Chats deleted");
+            }else if(chats == 0){
+                console.log("chats not avaliable for this user");
             }
         }
     }

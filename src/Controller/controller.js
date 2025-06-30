@@ -262,7 +262,7 @@ const UserApi = {
 }
 
 const OfflineChatSupport = {
-    addChat: async (username , newdata) => {
+    addChat: async (username, newdata) => {
 
         try {
             await chats.findOneAndUpdate({ username: username }, {
@@ -288,18 +288,18 @@ const OfflineChatSupport = {
         }
         return dataList
     },
-    deleteChat : async (username) => {
+    deleteChat: async (username) => {
 
-        try{
-            const result = await chats.deleteOne({username : username});
-            if(result.deletedCount == 0){
-                res.status(409).send("No user chat deleted");
-            }else{
-                res.status(200).send("Chats are deleted");
+        try {
+            const result = await chats.deleteOne({ username: username });
+            if (result.deletedCount == 0) {
+                return 0;
+            } else {
+                return 1;
             }
-        }catch(error){
-            console.log("Error at deleteChat : - ",error);
-            res.status(404).send("Error occurs : - ",error);
+        } catch (error) {
+            console.log("Error at deleteChat : - ", error);
+            return 2;
         }
     }
 }
